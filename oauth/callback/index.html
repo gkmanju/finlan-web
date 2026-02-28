@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>eBay Authorization — Redirecting…</title>
+  <style>
+    body { font-family: system-ui, sans-serif; background: #f5f3ff; display: flex;
+           align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
+    .box { background: #fff; border-radius: 12px; box-shadow: 0 4px 24px rgba(0,0,0,.1);
+           padding: 2.5rem 3rem; max-width: 440px; text-align: center; }
+    .icon { font-size: 3rem; margin-bottom: .5rem; }
+    h1 { font-size: 1.25rem; margin: 0 0 .5rem; color: #1e1b4b; }
+    p  { color: #64748b; font-size: .9rem; margin: .25rem 0; }
+    .spinner { width: 28px; height: 28px; border: 3px solid #e0e7ff;
+               border-top-color: #6366f1; border-radius: 50%;
+               animation: spin .7s linear infinite; margin: 1.2rem auto 0; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .error-box { background: #fef2f2; border: 1px solid #fca5a5; border-radius: 8px;
+                 padding: 1rem; margin-top: 1rem; color: #991b1b; font-size: .85rem; }
+    a.btn { display: inline-block; margin-top: 1.2rem; padding: .6rem 1.4rem;
+            background: #6366f1; color: #fff; border-radius: 8px; text-decoration: none;
+            font-size: .9rem; }
+  </style>
+</head>
+<body>
+<div class="box" id="box">
+  <div class="icon">🔗</div>
+  <h1>eBay Authorization</h1>
+  <p>Connecting to your e-automation portal…</p>
+  <div class="spinner"></div>
+</div>
+
+<script>
+  // ── Configuration ──────────────────────────────────────────────────────────
+  // LAN address of your e-automation portal
+  const PORTAL = 'http://192.168.1.100:8002';
+
+  // ── Relay logic ────────────────────────────────────────────────────────────
+  const params  = new URLSearchParams(location.search);
+  const code    = params.get('code');
+  const error   = params.get('error');
+  const errDesc = params.get('error_description');
+
+  if (error) {
+    // eBay returned an error — show it then redirect with error info
+    const box = document.getElementById('box');
+    box.innerHTML = `
+      <div class="icon">❌</div>
+      <h1>eBay Authorization Failed</h1>
+      <div class="error-box">
+        <strong>${error}</strong><br>
+        ${errDesc ? decodeURIComponent(errDesc.replace(/\+/g,' ')) : ''}
+      </div>
+      <p style="margin-top:.8rem">Returning to your portal…</p>`;
+    const dest = `${PORTAL}/api/oauth/callback?error=${encodeURIComponent(error)}`
+               + (errDesc ? `&error_description=${encodeURIComponent(errDesc)}` : '');
+    setTimeout(() => { window.location.href = dest; }, 2500);
+
+  } else if (code) {
+    // Success — relay the code to the portal immediately
+    const dest = `${PORTAL}/api/oauth/callback?code=${encodeURIComponent(code)}`;
+    window.location.replace(dest);
+
+  } else {
+    // No code, no error — probably landed here directly
+    document.getElementById('box').innerHTML = `
+      <div class="icon">⚠️</div>
+      <h1>Nothing to do here</h1>
+      <p>This page is the OAuth callback relay for the e-automation portal.</p>
+      <a class="btn" href="${PORTAL}">Open Portal</a>`;
+  }
+</script>
+</body>
+</html>
